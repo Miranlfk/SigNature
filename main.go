@@ -17,7 +17,7 @@ import (
 	"os"
 )
 
-// URL to upload the Credentials to the server and database
+// URL to upload the Credentials to the database
 const (            
 	serverURL      = "http://localhost:8000/api/logs" 
 )
@@ -114,7 +114,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Generate a sha256 hash of the file
+	// Generate a sha256 hash of the file and create a hex string
 	hash := sha256.Sum256(content)
 	hashString := hex.EncodeToString(hash[:])
 	fmt.Println("Hash of the file:", hashString)
@@ -129,7 +129,7 @@ func main() {
 	// Encode signature to base64
 	signedReference := base64.StdEncoding.EncodeToString(signature)
 
-	// Prepare payload to upload
+	// Prepare payload to upload to server
 	payload := &Payload{
 		FileName:           filePath,
 		Hash:       hashString,
@@ -137,7 +137,7 @@ func main() {
 		KeyName:        privateKeyFile,
 	}
 
-	// Upload payload
+	// Upload payload to server
 	err = UploadPayload(payload)
 	if err != nil {
 		fmt.Println("Error uploading payload:", err)
