@@ -20,6 +20,7 @@ import (
 // URL to upload the Credentials to the database
 const (            
 	serverURL      = "http://localhost:8000/api/logs" 
+	signatureAgent = "DemoSignTool"
 )
 
 // Payload represents the JSON payload structure of Credentials to be uploaded to the Database.
@@ -28,6 +29,7 @@ type Payload struct {
 	Hash       string `json:"hash"`
 	SignedReference string `json:"signedReference"`
 	KeyName        string `json:"keyName"`
+	SignAgent        string `json:"signAgent"`
 }
 
 // SignFile signs the content of a file using RSA private key, further it creates a hash of the file aswell as 
@@ -135,6 +137,7 @@ func main() {
 		Hash:       hashString,
 		SignedReference: signedReference,
 		KeyName:        privateKeyFile,
+		SignAgent:        signatureAgent,
 	}
 
 	// Upload payload to server
