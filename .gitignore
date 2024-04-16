@@ -1,4 +1,4 @@
 /keys
 signFilesforLog.exe
 .env
-go.sum
+.sum
