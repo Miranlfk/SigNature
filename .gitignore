@@ -2,3 +2,7 @@
 signFilesforLog.exe
 .env
 .sum
+/cosign_test_files
+private2.pem
+Testfile16.txt
+Testfile20.txt

@@ -17,7 +17,7 @@ import (
 	"os"
 )
 
-// URL to upload the Credentials to the database
+// URL and signingagent to upload the Credentials to the database
 const (            
 	serverURL      = "http://localhost:8000/api/logs" 
 	signatureAgent = "DemoSignTool"
@@ -89,7 +89,7 @@ func parsePrivateKey(privateKeyBytes []byte) (*rsa.PrivateKey, error) {
 func main() {
 	// Get private key path and file path from command line argument and asign to variables
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: ./sign-and-upload <key_file> <file>")
+		fmt.Println("Usage: ./signFilesforLog <key_file> <file>")
 		os.Exit(1)
 	}
 	privateKeyFile := os.Args[1]
