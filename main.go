@@ -229,7 +229,7 @@ func main() {
 	}
 
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: ./signFilesforLog -h")
+		fmt.Println("Usage: ./SigNature <commands>")
 		fmt.Println("Commands:")
 		fmt.Println("  sign -priv <private_key_file> -pub <public_key_file> -f <file>")
 		fmt.Println("  verify -pub <public_key_file> -f <file>")
@@ -240,7 +240,7 @@ func main() {
 	switch command {
 	case "sign":
 		if len(os.Args) < 8 {
-			fmt.Println("Usage: ./signFilesforLog sign -priv <private_key_file> -pub <public_key_file> -f <file>")
+			fmt.Println("Usage: ./SigNature sign -priv <private_key_file> -pub <public_key_file> -f <file>")
 			os.Exit(1)
 		}
 		privateKeyFile := os.Args[3]
@@ -325,7 +325,7 @@ func main() {
 
 	case "verify":
 		if len(os.Args) < 6 {
-			fmt.Println("Usage: ./signFilesforLog verify -pub <public_key_file> -f <file>")
+			fmt.Println("Usage: ./SigNature verify -pub <public_key_file> -f <file>")
 			os.Exit(1)
 		}
 		publicKeyFile := os.Args[3]

@@ -14,7 +14,7 @@ Generate a rsa private and public keys using OpenSSL:
 To use the executable:
 
 ```
-Usage: ./SigNature -h
+Usage: ./SigNature <commands>
 Commands:
   sign -priv <private_key_file> -pub <public_key_file> -f <file>
   verify -pub <public_key_file> -f <file>
