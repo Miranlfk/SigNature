@@ -1,4 +1,4 @@
-# signFilesforLog
+# SigNature
 A mini executable/CLI tool to sign files and update Credential Logs. RSA private key and public key are generated using `openssl` can be used to sign and verify a file.
 
 To build the executable:
