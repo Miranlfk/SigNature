@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 )
 
 // URLs and constants(signing agent) for the application
@@ -145,6 +146,81 @@ func Login(email, password string) (string, error) {
 	return token, nil
 }
 
+// VerifyFile verifies the signature of the file using the public key
+func VerifyFile(filePath string, publicKey *rsa.PublicKey) error {
+	// Read the file to be verified
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("error reading file: %w", err)
+	}
+
+	// Extract the hash and signature from the file's metadata
+	var hash, signature []byte
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "Hash:") {
+			hash, err = hex.DecodeString(strings.TrimSpace(line[len("Hash:"):]))
+			if err != nil {
+				return fmt.Errorf("error decoding hash: %w", err)
+			}
+		}
+		if strings.HasPrefix(line, "SignedReference:") {
+			signature, err = base64.StdEncoding.DecodeString(strings.TrimSpace(line[len("SignedReference:"):]))
+			if err != nil {
+				return fmt.Errorf("error decoding signature: %w", err)
+			}
+		}
+	}
+
+	// Verify the signature against the hash using the public key
+	err = rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hash, signature)
+	if err != nil {
+		return fmt.Errorf("signature verification failed: %w", err)
+	}
+
+	return nil
+}
+
+
+// parsePublicKey parses RSA public key from bytes
+func parsePublicKey(publicKeyBytes []byte) (*rsa.PublicKey, error) {
+    block, _ := pem.Decode(publicKeyBytes)
+    if block == nil {
+        return nil, fmt.Errorf("failed to parse PEM block containing the public key")
+    }
+
+    // Parse public key using ParsePKIXPublicKey
+    publicKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+    if err != nil {
+        return nil, fmt.Errorf("failed to parse public key: %w", err)
+    }
+
+    // Type assert the parsed public key to *rsa.PublicKey
+    publicKey, ok := publicKeyInterface.(*rsa.PublicKey)
+    if !ok {
+        return nil, fmt.Errorf("failed to convert public key to RSA public key")
+    }
+
+    return publicKey, nil
+}
+
+// LoadPublicKey loads RSA public key from file
+func LoadPublicKey(publicKeyFile string) (*rsa.PublicKey, error) {
+	// Read public key file
+	publicKeyBytes, err := ioutil.ReadFile(publicKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("error reading public key file: %w", err)
+	}
+
+	// Parse public key from bytes
+	publicKey, err := parsePublicKey(publicKeyBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing public key: %w", err)
+	}
+
+	return publicKey, nil
+}
+
 func main() {
 	// Load environment variables from .env file
 	if err := godotenv.Load(); err != nil {
@@ -152,76 +228,125 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Get private key path and file path from command line arguments and assign to variables
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: ./signFilesforLog <private_key_file> <file>")
-		os.Exit(1)
-	}
-	privateKeyFile := os.Args[1]
-	filePath := os.Args[2]
-
-	// Read private key file set to bytes variable
-	privateKeyBytes, err := ioutil.ReadFile(privateKeyFile)
-	if err != nil {
-		fmt.Println("Error reading private key file:", err)
+		fmt.Println("Usage: ./signFilesforLog -h")
+		fmt.Println("Commands:")
+		fmt.Println("  sign -priv <private_key_file> -pub <public_key_file> -f <file>")
+		fmt.Println("  verify -pub <public_key_file> -f <file>")
 		os.Exit(1)
 	}
 
-	// Parse private key from bytes variable
-	privateKey, err := parsePrivateKey(privateKeyBytes)
-	if err != nil {
-		fmt.Println("Error parsing private key:", err)
+	command := os.Args[1]
+	switch command {
+	case "sign":
+		if len(os.Args) < 8 {
+			fmt.Println("Usage: ./signFilesforLog sign -priv <private_key_file> -pub <public_key_file> -f <file>")
+			os.Exit(1)
+		}
+		privateKeyFile := os.Args[3]
+		publicKeyfile := os.Args[5]
+		filePath := os.Args[7]
+
+		// Read private key file set to bytes variable
+		privateKeyBytes, err := ioutil.ReadFile(privateKeyFile)
+		if err != nil {
+			fmt.Println("Error reading private key file:", err)
+			os.Exit(1)
+		}
+
+		// Parse private key from bytes variable
+		privateKey, err := parsePrivateKey(privateKeyBytes)
+		if err != nil {
+			fmt.Println("Error parsing private key:", err)
+			os.Exit(1)
+		}
+
+		// Sign file using the user provided private key
+		signature, err := SignFile(filePath, privateKey)
+		if err != nil {
+			fmt.Println("Error signing file:", err)
+			os.Exit(1)
+		}
+
+		// Encode signature to base64
+		signedReference := base64.StdEncoding.EncodeToString(signature)
+
+		// Generate a sha256 hash of the file and create a hex string
+		content, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			fmt.Println("Error reading file:", err)
+			os.Exit(1)
+		}
+		hash := sha256.Sum256(content)
+		hashString := hex.EncodeToString(hash[:])
+		fmt.Println("Hash of the file:", hashString)
+
+		// Write the signature reference and hash to the file's metadata
+		metadata := []byte(fmt.Sprintf("SignedReference: %s\nHash: %s\n", signedReference, hashString))
+		contentWithMetadata := append(metadata, content...)
+
+		// Write the file with metadata
+		err = ioutil.WriteFile(filePath, contentWithMetadata, 0644)
+		if err != nil {
+			fmt.Println("Error writing file with metadata:", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("File signed successfully!")
+
+		payload := &Payload{
+			FileName:        filePath,
+			Hash:            hashString,
+			SignedReference: signedReference,
+			KeyName:         publicKeyfile,
+			SignAgent:       signatureAgent,
+		}
+	
+		// Get email and password from environment variables
+		email := os.Getenv("EMAIL")
+		password := os.Getenv("PASSWORD")
+	
+		// Login using the email and password and retrieve token
+		token, err := Login(email, password)
+		if err != nil {
+			fmt.Println("Error logging in:", err)
+			os.Exit(1)
+		}
+	
+		// Upload payload to server with the token in Authorization header
+		err = UploadPayload(payload, token)
+		if err != nil {
+			fmt.Println("Error uploading payload:", err)
+			os.Exit(1)
+		}
+	
+		fmt.Println("Payload uploaded successfully!")
+
+	case "verify":
+		if len(os.Args) < 6 {
+			fmt.Println("Usage: ./signFilesforLog verify -pub <public_key_file> -f <file>")
+			os.Exit(1)
+		}
+		publicKeyFile := os.Args[3]
+		filePath := os.Args[5]
+
+		// Load public key from file
+		publicKey, err := LoadPublicKey(publicKeyFile)
+		if err != nil {
+			fmt.Println("Error loading public key:", err)
+			os.Exit(1)
+		}
+
+		// Verify the signature of the file using the public key
+		err = VerifyFile(filePath, publicKey)
+		if err != nil {
+			fmt.Println("Error verifying file:", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("File verified successfully!")
+	default:
+		fmt.Println("Invalid command. Available commands: sign, verify")
 		os.Exit(1)
 	}
-
-	// Read file to a byte set to content variable
-	content, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		fmt.Println("Error reading file:", err)
-		os.Exit(1)
-	}
-
-	// Generate a sha256 hash of the file and create a hex string
-	hash := sha256.Sum256(content)
-	hashString := hex.EncodeToString(hash[:])
-	fmt.Println("Hash of the file:", hashString)
-
-	// Sign file using the user provided private key
-	signature, err := SignFile(filePath, privateKey)
-	if err != nil {
-		fmt.Println("Error signing file:", err)
-		os.Exit(1)
-	}
-
-	// Encode signature to base64
-	signedReference := base64.StdEncoding.EncodeToString(signature)
-
-	// Prepare payload to upload to server
-	payload := &Payload{
-		FileName:        filePath,
-		Hash:            hashString,
-		SignedReference: signedReference,
-		KeyName:         privateKeyFile,
-		SignAgent:       signatureAgent,
-	}
-
-	// Get email and password from environment variables
-	email := os.Getenv("EMAIL")
-	password := os.Getenv("PASSWORD")
-
-	// Login using the email and password and retrieve token
-	token, err := Login(email, password)
-	if err != nil {
-		fmt.Println("Error logging in:", err)
-		os.Exit(1)
-	}
-
-	// Upload payload to server with the token in Authorization header
-	err = UploadPayload(payload, token)
-	if err != nil {
-		fmt.Println("Error uploading payload:", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("Payload uploaded successfully!")
 }
