@@ -146,7 +146,7 @@ func Login(email, password string) (string, error) {
 	return token, nil
 }
 
-// VerifyFile verifies the signature of the file using the public key
+// VerifyFile verifies the signature of the file using the rsa public key
 func VerifyFile(filePath string, publicKey *rsa.PublicKey) error {
 	// Read the file to be verified
 	content, err := ioutil.ReadFile(filePath)
@@ -172,7 +172,7 @@ func VerifyFile(filePath string, publicKey *rsa.PublicKey) error {
 		}
 	}
 
-	// Verify the signature against the hash using the public key
+	// Verify the signature against the hash using the rsa public key
 	err = rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hash, signature)
 	if err != nil {
 		return fmt.Errorf("signature verification failed: %w", err)
@@ -206,7 +206,7 @@ func parsePublicKey(publicKeyBytes []byte) (*rsa.PublicKey, error) {
 
 // LoadPublicKey loads RSA public key from file
 func LoadPublicKey(publicKeyFile string) (*rsa.PublicKey, error) {
-	// Read public key file
+	// Read public key file into bytes
 	publicKeyBytes, err := ioutil.ReadFile(publicKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("error reading public key file: %w", err)
@@ -294,6 +294,7 @@ func main() {
 
 		fmt.Println("File signed successfully!")
 
+		// Create the payload with the file name, hash, signature reference, public key name and signature agent
 		payload := &Payload{
 			FileName:        filePath,
 			Hash:            hashString,
@@ -337,7 +338,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		// Verify the signature of the file using the public key
+		// Verify the signature of the file using the rsa public key
 		err = VerifyFile(filePath, publicKey)
 		if err != nil {
 			fmt.Println("Error verifying file:", err)
