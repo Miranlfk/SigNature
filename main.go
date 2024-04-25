@@ -23,7 +23,7 @@ import (
 const (
 	loginURL       = "http://localhost:8000/api/users/login"
 	logsURL        = "http://localhost:8000/api/logs"
-	signatureAgent = "DemoSignTool"
+	signatureAgent = "SigNature"
 )
 
 // Payload represents the JSON payload structure of Credentials to be uploaded to the Database.
@@ -33,6 +33,8 @@ type Payload struct {
 	SignedReference string `json:"signedReference"`
 	KeyName         string `json:"keyName"`
 	SignAgent       string `json:"signAgent"`
+	File			[]byte `json:"file"`
+	KeyFile 		[]byte `json:"keyFile"`
 }
 
 // SignFile signs the content of a file using RSA private key, further it creates a hash of the file as well as
@@ -254,6 +256,13 @@ func main() {
 			os.Exit(1)
 		}
 
+		publicKeyBytes, err := ioutil.ReadFile(publicKeyfile)
+		if err != nil {
+			fmt.Println("Error reading private key file:", err)
+			os.Exit(1)
+		}
+
+
 		// Parse private key from bytes variable
 		privateKey, err := parsePrivateKey(privateKeyBytes)
 		if err != nil {
@@ -277,6 +286,7 @@ func main() {
 			fmt.Println("Error reading file:", err)
 			os.Exit(1)
 		}
+
 		hash := sha256.Sum256(content)
 		hashString := hex.EncodeToString(hash[:])
 		fmt.Println("Hash of the file:", hashString)
@@ -296,11 +306,13 @@ func main() {
 
 		// Create the payload with the file name, hash, signature reference, public key name and signature agent
 		payload := &Payload{
-			FileName:        filePath,
-			Hash:            hashString,
-			SignedReference: signedReference,
-			KeyName:         publicKeyfile,
-			SignAgent:       signatureAgent,
+			FileName:			filePath,
+			Hash:				hashString,
+			SignedReference:	signedReference,
+			KeyName:			publicKeyfile,
+			SignAgent:			signatureAgent,
+			File:				content,
+			KeyFile:			publicKeyBytes,
 		}
 	
 		// Get email and password from environment variables

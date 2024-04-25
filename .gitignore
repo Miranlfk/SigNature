@@ -4,5 +4,9 @@ SigNature.exe
 .sum
 /cosign_test_files
 private2.pem
+private.pem
+public.pem
+public1.pem
+NewFile.txt
 Testfile16.txt
 Testfile20.txt
