@@ -27,7 +27,7 @@ Use:
 
 ```./SigNature sign -priv <private_key_file> -pub <public_key_file> -f <file>```
 
-As per the above command, the user provided file will be signed using the rsa private key under the SignPKCS1v15 format, further Metadata of "Hash:" or "SignedReference:" will be appended to the file. Further the File Name, Hash Value, Signature Reference, Public Key Name and Signature Agent will be uploaded as a log to the CredentialLog via api call.  
+As per the above command, the user provided file will be signed using the rsa private key under the SignPKCS1v15 format, further Metadata of "Hash:" or "SignedReference:" will be appended to the file. Further the File Name, File Hash Value, Signature Reference, Public Key Name, Key and the Signature Agent will be uploaded as a log to the CredentialLog via api call.  
 
 
 ### Verify

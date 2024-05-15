@@ -73,10 +73,8 @@ func UploadPayload(payload *Payload, token string) error {
 
 	// Set the content type header
 	req.Header.Set("Content-Type", "application/json")
-
 	// Set the Authorization header with the token
 	req.Header.Set("Authorization", "Bearer "+token)
-
 	// Send the request to the server
 	resp, err := client.Do(req)
 	if err != nil {
@@ -120,7 +118,6 @@ func Login(email, password string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	// Send login request to the server
 	resp, err := http.Post(loginURL, "application/json", bytes.NewBuffer(loginData))
 	if err != nil {
@@ -132,7 +129,6 @@ func Login(email, password string) (string, error) {
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("login failed: %s", resp.Status)
 	}
-
 	// Decode login response and extract the token from it
 	var loginResponse map[string]string
 	if err := json.NewDecoder(resp.Body).Decode(&loginResponse); err != nil {
@@ -262,7 +258,6 @@ func main() {
 			os.Exit(1)
 		}
 
-
 		// Parse private key from bytes variable
 		privateKey, err := parsePrivateKey(privateKeyBytes)
 		if err != nil {
@@ -304,7 +299,7 @@ func main() {
 
 		fmt.Println("File signed successfully!")
 
-		// Create the payload with the file name, hash, signature reference, public key name and signature agent
+		// Create the payload with the file name, hash, signature reference, public key name, signature agent, file content and public key file
 		payload := &Payload{
 			FileName:			filePath,
 			Hash:				hashString,
